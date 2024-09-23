@@ -57,6 +57,12 @@ library(sf)
 library(rnaturalearth)
 library(rnaturalearthdata)
 library(rnaturalearthhires)
+library(cowplot)
+library(googleway)
+library(ggplot2)
+library(ggrepel)
+library(ggspatial)
+library(RColorBrewer)
 ```
 
 Let's also go ahead and recreate the `world` dataframe that we used last week. 
@@ -82,8 +88,13 @@ ggplot(data = world) +
     coord_sf(xlim = c(-130, -110), ylim = c(40, 50), expand = FALSE) +
     ggtitle("Pacific Northwest of the United States")+
     theme_void()
-
 ```
+
+#Kindly refer to Challenge 3 codes
+
+us_states_cont <- ne_states(
+country = 'united states of america', returnclass = 'sf') %>%
+filter(! name %in% c('Alaska', 'Hawaii'))
 
 This gives us a very simple map which doesn't provide much information. We will need to add more data layers to make the map more meaningful.
 
@@ -93,6 +104,14 @@ Let's create a layer that includes state/province level data.
 
 ```{r}
 states <- (ne_states(country = "United States of America"))
+states
+
+```
+
+```{r}
+us_states <- ne_states(
+    country = "United States of America",
+    returnclass = 'sf')
 ```
 
 Now we can add this layer to our existing map with a second `geom_sf`. 
@@ -106,13 +125,31 @@ ggplot() +
     coord_sf(xlim = c(-130, -110), ylim = c(40, 50), expand = FALSE) +
     ggtitle("Pacific Northwest of the United States")+
     theme_void()
+```
 
+```{r}
+ggplot(data=world)+
+  geom_sf(data = us_states)+
+  geom_sf(aes(fill="Hawaii"))+
+  coord_sf(xlim=c(-160.5,-154.5),ylim=c(18.5,22.5), expand = FALSE)+
+  ggtitle("Map of Hawaii, United States")+
+  annotation_scale(location = "bl", width_hint = 0.5) +
+    annotation_north_arrow(location = "bl", which_north = "true", 
+        pad_x = unit(0.75, "in"), pad_y = unit(0.5, "in"),
+        style = north_arrow_fancy_orienteering) +
+  scale_fill_brewer(palette = "Set3")+
+  labs(fill = "State")+
+  theme(panel.grid.major = element_line(color = gray(.7), 
+                                        linetype = "dashed", 
+                                        size = 0.2), 
+        panel.background = element_rect(fill = "aliceblue"))
 ```
 
 To see what other cultural/political features are available, use the function `df_layers_cultural`. 
 
 ```{r}
-df_layers_cultural
+  df_layers_cultural
+  df_layers_physical
 ```
 
 For example, you may want to use the `admin_0_pacific_groupings` data if you are focused on Pacific islands. 
@@ -160,6 +197,7 @@ Now let's add the lakes and rivers to our map.
 
 **Challenge 4: Update the `coord_sf` with your bounding box and your `ggtitle` with your own title.** The `states` layer should also now be updated with your new `states` dataframe you created in Challenge 2. 
 
+
 ```{r}
 ggplot() +
     geom_sf(data = world) +
@@ -187,6 +225,47 @@ ggplot() +
     ggtitle("Pacific Northwest Region of the United States")+
     theme_void()
 
+```
+
+
+```{r}
+populated_places <- ne_download(
+  scale = 50,
+  type = "populated_places"
+)
+```
+
+
+```{r}
+
+# Download the protected areas layer
+reefs <- ne_download(
+  type = "reefs", 
+  category = "physical", 
+  returnclass = "sf")
+
+# Print the first few rows to verify
+print(head(protected_areas))
+
+
+
+ggplot(data=world)+
+  geom_sf(data = us_states)+
+  geom_sf(data=lakes50,fill = "darkblue", color = "red")+
+  geom_sf(data = rivers50, color = "lightblue", size = 0.15)+
+  geom_sf(aes(fill="Hawaii"),size = 5)+
+  coord_sf(xlim=c(-160.5,-154.5),ylim=c(18.5,22.5), expand = FALSE)+
+  ggtitle("Map of Hawaii, United States")+
+  annotation_scale(location = "bl", width_hint = 0.5) +
+    annotation_north_arrow(location = "bl", which_north = "true", 
+        pad_x = unit(0.75, "in"), pad_y = unit(0.5, "in"),
+        style = north_arrow_fancy_orienteering) +
+  scale_fill_brewer(palette = "Set3")+
+  labs(fill = "State")+
+  theme(panel.grid.major = element_line(color = gray(.7), 
+                                        linetype = "dashed", 
+                                        size = 0.2), 
+        panel.background = element_rect(fill = "aliceblue"))
 ```
 
 For our final addition, let's highlight the specific area we will be focusing on. To do this, we will create a new layer that only includes the state (or province) where we will focus on for our project. 
