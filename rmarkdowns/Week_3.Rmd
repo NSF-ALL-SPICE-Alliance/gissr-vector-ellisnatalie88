@@ -268,6 +268,25 @@ coastline <- bb %>%
 
 ```
 
+```{r}
+# retrieving data of streets on Oahu
+Oahu_streets <- Oahubb %>%
+  opq() %>%
+  add_osm_feature("highway", c("motorway", "primary", "secondary", "tertiary")) %>%
+  osmdata_sf()
+
+# retrieving data of small streets on Oahu
+Oahu_small_streets <- Oahubb %>%
+  opq() %>%
+  add_osm_feature(key = "highway", value = c("residential", "living_street", "unclassified", "service", "footway")) %>%
+  osmdata_sf()
+
+Oahu_coastline <- Oahubb %>%
+  opq() %>%
+  add_osm_feature(key = "natural", value = "coastline") %>%
+  osmdata_sf()
+```
+
 Then we use the `ggplot2` package to visualize each of these features along with the hospitals on Maui. Note how we have used different colors, line sizes (thicknesses) and opacities (opaque is the opposite of transparent) to differentiate among the features.
 
 After reading through the whole tutorial, come back and do:
@@ -290,6 +309,35 @@ ggplot() +
     y = "Latitude"
   )
 ```
+
+```{r}
+# visualising all retrieved features over each other to form a map of Oahu
+ggplot() +
+  geom_sf(data = Oahu_streets$osm_lines, inherit.aes = FALSE, color = "#1B9E77", size = .4, alpha = .8) +
+  geom_sf(data = Oahu_small_streets$osm_lines, inherit.aes = FALSE, color = "#a6a6a6", size = .2, alpha = .8) +
+  geom_sf(data = Oahu_coastline$osm_lines, inherit.aes = FALSE, color = "black", size = .8, alpha = .5) +
+  geom_sf(data = healthcare$osm_polygons, inherit.aes = FALSE, color = "red", fill = "red", alpha = 0.9, size = 1) +
+  coord_sf(xlim = c(-158.28058,-157.64863), ylim = c(21.25482, 21.71201), expand = TRUE) +
+  geom_sf_text(data = healthcare$osm_polygons, aes(label = name), size = 1.5, hjust = 0) +
+  theme_solarized_2() +
+  labs(
+    title = "Hospitals in Oahu - Hawaii",
+    x = "Longitude",
+    y = "Latitude"
+  )
+
+
+```
+
+# Create a new plot object, starting with the street map
+rest_plot <- street_plot +
+  geom_sf(data = tucson_rest$osm_points,
+          inherit.aes = FALSE,
+          size = 1.5,
+          color = "#1B9E77") # approximately "elf green"???
+# Print the plot
+rest_plot
+
 This is more helpful. At least now we can see that most schools are either in urban areas (where roads are more dense) or along the coastline. (After you come back and complete Challenge 5, what patterns do you notice in your target area?) 
 
 However, the schools that are clustered together are hard to see and their labels are all overlapping. This is a great reason to use an interactive map that allows us to zoom in and out!
@@ -311,7 +359,6 @@ leaflet() %>%
 
 
 ```{r}
-# This code is nort part of the tutorial but it works
 leaflet() %>%  
   addTiles() %>%
   addPolygons(data = healthcare$osm_polygons,
