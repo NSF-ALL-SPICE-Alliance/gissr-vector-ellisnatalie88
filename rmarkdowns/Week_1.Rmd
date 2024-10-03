@@ -133,6 +133,11 @@ library(sf)
 library(rnaturalearth)
 library(rnaturalearthdata)
 library(rnaturalearthhires)
+library(cowplot)
+library(googleway)
+library(ggplot2)
+library(ggrepel)
+library(ggspatial)
 ```
 
 
@@ -146,6 +151,7 @@ In the second line, we are checking to see that the object is the correct "class
 
 ```{r}
 world <- ne_countries(scale = "medium", returnclass = "sf")
+
 class(world)
 ```
 
@@ -180,6 +186,16 @@ ggplot(data = world) +
 
 ```
 
+
+```{r}
+ggplot(data=world) +
+  geom_sf(aes(fill = pop_est)) +
+    scale_fill_viridis_c(option = "plasma", trans = "sqrt") +
+  xlab("Longitude") + ylab("Latitude") +
+  ggtitle("World Map", subtitle = "Created by Ellis Natalie")
+```
+
+
 # Improve your world map
 
 ## Remove data
@@ -198,6 +214,13 @@ Nothing against Australia! We're just learning how to navigate dataframes and ma
 ```{r}
 world_without_antarctica <- world %>% 
   filter(iso_a3 != "ATA")
+```
+
+```{r}
+world_without_australia <- world %>% 
+  filter(iso_a3 != "AUS")
+
+world_without_australia
 ```
 
 Then we create a new use of the `ggplot()` function that specifies our new dataframe without Antarctica. Notice this code is slightly different in terms of where the `data = world_without_antarctica` part shows up. This is one of many examples where there are multiple ways of doing the same thing in R. It's a matter of style, and you will develop your own preferred style as you learn more.
@@ -228,6 +251,15 @@ ggplot() +
   geom_sf(data = world_without_antarctica, 
           fill = "#669438", color = "#32481B", size = 0.25) +
   ggtitle("Countries of the World", subtitle = "without Antarctica")
+```
+
+
+```{r}
+ggplot(data=world_without_australia) +
+  geom_sf(aes(fill = pop_est)) +
+    scale_fill_viridis_c(option = "plasma", trans = "sqrt") +
+  xlab("Longitude") + ylab("Latitude") +
+  ggtitle("World Map (without Australia)", subtitle = "~ Created by Ellis Natalie~")
 ```
 
 Now let's work on an important aspect of cartographic design: decluttering our map. Since we are just making a basic world map, let's get rid of the grid lines showing latitude and longitude and the box around our map. The easiest way to do this is to use a theme that is built in to the `ggplot2` package: `theme_void`.
@@ -296,6 +328,17 @@ ggplot(data = world) +
   ggtitle("Lubbock, TX as the Center of the World", subtitle = "Orthographic Azimuthal")+
   theme_void()
 
+```
+
+```{r}
+ggplot(data=world_without_australia) +
+  geom_sf(aes(fill = pop_est)) +
+  coord_sf(crs = "+proj=ortho +lat_0=6.9147 +lon_0=107.6098 ") +
+    scale_fill_viridis_c(option = "plasma", trans = "sqrt") +
+  xlab("Longitude") + ylab("Latitude") +
+  ggtitle("*Bandung, Indonesia* as the Center of the World", subtitle = "~ Created by Ellis Natalie~") +
+  theme(panel.background = element_rect(fill = "azure"),
+        panel.border = element_rect(fill = NA))
 ```
 
 
