@@ -68,6 +68,7 @@ Let's double check to see if it installed correctly using the following code:
 system.file(package = "tidyverse") # input the name of the package in quotes
 ```
 
+
 If you got a response giving you a file path - you're all set! You successfully installed your first package! 
 
 #### Loading a Library
@@ -107,6 +108,16 @@ my_age + 5 # how old will you be in 5 years?
 
 #### <span style="color: red;">Challenge 1</span>
 Create a my_name variable with your name assigned to the variable instead of "Victoria DelaCruz". Then, create a my_age variable with your age. 
+
+```{r}
+my_name <- "Ellis Natalie"
+my_name
+```
+
+```{r}
+my_age <- 46
+my_age
+```
 
 #### Different Types of Data
 
@@ -231,7 +242,6 @@ Wow, that's a lot of information on the dataset structure! Let's run some code t
 - Viewing column names
 ```{r}
 column_names <- as.list(colnames(sdr_data))  # click on column_names in your environment pane at the top right of your screen to check them out
-
 ```
 
 - How many rows and columns
@@ -282,7 +292,7 @@ The next step is cleaning and manipulating data. There are different ways to do 
 
 Select is a function used to subset or select columns in your R data frame. Let's try this out by selecting the SDG 3 and SDG 4 scores.
 
-```{r}
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
 sdr_data %>% 
   select(goal_3_score, goal_4_score)
 ```
@@ -293,6 +303,12 @@ What if we want to subset specific rows? We can do this by using the filter func
 
 #### <span style="color: red;">Challenge 2</span>
 Using the `select()` function, select two new SDG goal scores. Assign it to a variable named `SDG_scores`. 
+
+```{r}
+SDG_scores <- sdr_data %>% 
+  select(goal_15_score,goal_16_score)
+```
+
 
 *2. filter()*
 
@@ -313,6 +329,11 @@ Notes:
 
 #### <span style="color: red;">Challenge 3</span>
 Using the `filter()` function, filter for another region other than Oceania. Assign it to a variable named `new_region`. 
+
+```{r}
+new_region <- sdr_data %>% 
+  filter(regions_used_for_the_sdr == "MENA" | regions_used_for_the_sdr == "LAC")
+```
 
 **Important**
 

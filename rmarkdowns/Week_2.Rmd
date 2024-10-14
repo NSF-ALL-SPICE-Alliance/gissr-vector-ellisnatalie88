@@ -57,13 +57,20 @@ library(sf)
 library(rnaturalearth)
 library(rnaturalearthdata)
 library(rnaturalearthhires)
+library(cowplot)
+library(googleway)
+library(ggplot2)
+library(ggrepel)
+library(ggthemes)
+library(ggspatial)
+library(RColorBrewer)
 ```
 
 Let's also go ahead and recreate the `world` dataframe that we used last week. 
 
 ```{r}
 world <- ne_countries(scale = "medium", returnclass = "sf")
-class(world)
+world
 ```
 
 ## Make your first regional map
@@ -82,8 +89,22 @@ ggplot(data = world) +
     coord_sf(xlim = c(-130, -110), ylim = c(40, 50), expand = FALSE) +
     ggtitle("Pacific Northwest of the United States")+
     theme_void()
+```
+
+
+```{r}
+ggplot(data = world) +
+    geom_sf() +
+    coord_sf(xlim = c(-158.28058, -157.64863), ylim = c(21.25482, 21.71201), expand = FALSE) +
+    ggtitle("Oahu - Hawaii")+
+    theme_economist()
 
 ```
+
+
+us_states_cont <- ne_states(
+country = 'united states of america', returnclass = 'sf') %>%
+filter(! name %in% c('Alaska', 'Hawaii'))
 
 This gives us a very simple map which doesn't provide much information. We will need to add more data layers to make the map more meaningful.
 
@@ -93,6 +114,14 @@ Let's create a layer that includes state/province level data.
 
 ```{r}
 states <- (ne_states(country = "United States of America"))
+states
+```
+
+
+```{r}
+us_states <- ne_states(
+    country = "United States of America",
+    returnclass = 'sf')
 ```
 
 Now we can add this layer to our existing map with a second `geom_sf`. 
@@ -101,25 +130,44 @@ Now we can add this layer to our existing map with a second `geom_sf`.
 
 ```{r}
 ggplot() +
-    geom_sf(data = world) +
-    geom_sf(data = states) +
+    geom_sf(data = us_states) +
     coord_sf(xlim = c(-130, -110), ylim = c(40, 50), expand = FALSE) +
     ggtitle("Pacific Northwest of the United States")+
     theme_void()
+```
+
+```{r}
+ggplot() +
+    geom_sf(data = us_states) +
+    coord_sf(xlim = c(-158.28058, -157.64863), ylim = c(21.25482, 21.71201), expand = FALSE) +
+    ggtitle("Map of Oahu - Hawaii")+
+  annotation_scale(location = "bl", width_hint = 0.5) +
+    annotation_north_arrow(location = "bl", which_north = "true", pad_x = unit(0.75, "in"), pad_y = unit(0.5, "in"),
+        style = north_arrow_fancy_orienteering)+
+  theme(panel.grid.major = element_line(
+    color = grey(.7), 
+    linetype = "dashed", 
+    size=0.2),
+    panel.background = element_rect(fill = "aliceblue"))+
+  theme_economist()
 
 ```
+
 
 To see what other cultural/political features are available, use the function `df_layers_cultural`. 
 
 ```{r}
-df_layers_cultural
+  df_layers_cultural
+str(df_layers_cultural)
+  df_layers_physical
+str(df_layers_physical)
 ```
 
 For example, you may want to use the `admin_0_pacific_groupings` data if you are focused on Pacific islands. 
 
 ```{r}
 pacific_groups <- ne_download(
-  scale = 50,
+  scale = 10,
   type = "admin_0_pacific_groupings"
 )
 ```
@@ -134,6 +182,17 @@ coord_sf(crs = "+proj=ortho +lat_0=0 +lon_0=-160 ") +
   coord_sf(xlim = c(145, 175), ylim = c(-20, 5), expand = FALSE) +
   ggtitle("Solomon Islands", subtitle = "Showing Pacific Island Groupings")+
   theme_void()
+```
+
+```{r}
+ggplot() +
+  geom_sf(data = us_states)+
+  geom_sf(data = pacific_groups)+
+  geom_sf_text(data = us_states, aes(label = admin))+
+  coord_sf(crs = "+proj=ortho +lat_0=0 +lon_0=-160 ") +
+  coord_sf(xlim = c(-158.28058, -157.64863), ylim = c(21.25482, 21.71201), expand = FALSE)+
+  ggtitle("Oahu - Hawaii", subtitle = "Showing Pacific Island Groupings")+
+  theme_stata()
 ```
 
 
@@ -154,22 +213,42 @@ rivers50 <- ne_download(
   returnclass = "sf"
 )
 
+# oceans
+ocean50 <- ne_download(
+  scale = 50, 
+  type = "ocean", 
+  category = "physical")
 ```
 
 Now let's add the lakes and rivers to our map. 
 
 **Challenge 4: Update the `coord_sf` with your bounding box and your `ggtitle` with your own title.** The `states` layer should also now be updated with your new `states` dataframe you created in Challenge 2. 
 
+
 ```{r}
 ggplot() +
-    geom_sf(data = world) +
-    geom_sf(data = states) +
-    geom_sf(data = lakes50) +
-    geom_sf(data = rivers50) +
+  geom_sf(data = world) +
+  geom_sf(data = states) +
+  geom_sf(data = lakes50) +
+  geom_sf(data = rivers50) +
     coord_sf(xlim = c(-130, -110), ylim = c(40, 50), expand = FALSE) +
     ggtitle("Pacific Northwest Region of the United States")+
     theme_void()
 
+```
+
+
+```{r}
+#unable to produce the correct map
+ggplot() +
+  geom_sf(data = us_states)+ 
+  geom_sf(data = lakes50, fill = "darkblue", color = "black") +
+  geom_sf(data = rivers50, color = "yellow", size = 0.15) +
+  geom_sf(data = ocean50, color = "red", size = 0.15) +
+  geom_sf_text(data = us_states, aes(label = name), size = 5, fontface = "bold", nudge_y = states$nudge_y) +
+  coord_sf(xlim = c(-158.28058, -157.64863), ylim = c(21.25482, 21.71201), expand = FALSE) + 
+  ggtitle("Oahu - Hawaii", subtitle = "Showing Lake & River & Ocean")+
+  theme_stata()
 ```
 
 Now let's choose colors for all of our layers, and add some labels from the `states` layer with a `geom_text` layer. 
@@ -178,6 +257,7 @@ Now let's choose colors for all of our layers, and add some labels from the `sta
 
 ```{r}
 ggplot() +
+    geom_sf(data = reefs, fill = "lightgray") +
     geom_sf(data = world, fill = "lightgray") +
     geom_sf(data = states, fill = "antiquewhite1", size = 0.25) +
     geom_sf(data = lakes50, fill = "darkblue", color = "black") +
@@ -186,6 +266,28 @@ ggplot() +
     coord_sf(xlim = c(-130, -110), ylim = c(40, 50), expand = FALSE) +
     ggtitle("Pacific Northwest Region of the United States")+
     theme_void()
+
+```
+
+
+```{r}
+populated_places <- ne_download(
+  scale = 10,
+  type = "populated_places"
+)
+```
+
+
+```{r}
+
+# Download the protected areas layer
+reefs <- ne_download(
+  type = "reefs", 
+  category = "physical", 
+  returnclass = "sf")
+
+# Print the first few rows to verify
+print(head(protected_areas))
 
 ```
 

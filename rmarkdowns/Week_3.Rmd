@@ -65,7 +65,6 @@ Load the necessary packages (install them first if you haven't already):
 library(tidyverse)
 library(leaflet)
 library(osmdata)
-library(leaflet)
 ```
 
 
@@ -85,6 +84,25 @@ Each feature has subcategories, called "tags". The `available_tags()` function l
 available_tags("healthcare")
 ```
 
+```{r}
+# this website is a good reference to find out the available tags https://wiki.openstreetmap.org/wiki/Map_features 
+
+available_tags(feature = "healthcare:speciality")  
+#unable to show result 
+
+available_tags(feature = "healthcare:counselling")
+#unabl to show result 
+
+available_tags(feature = "traffic_calming")
+
+available_tags(feature = "electric_bicycle")
+
+available_tags(feature = "water")
+
+available_tags(feature = "amenity")
+
+```
+
 ## Creating a query to download data
 
 The first step in creating an `osmdata` query is defining the geographical area we want to include in the query. This can be done by defining a bounding box that defines a geographical area by its bounding latitudes and longitudes. The osmdata package provides a function `getbb()` to retrieve the bounding box of a place using its name. We can now create the bounding box of Maui island in Hawaiʻi.
@@ -95,12 +113,24 @@ The first step in creating an `osmdata` query is defining the geographical area 
 bb <- getbb("Maui")
 bb
 ```
+
+```{r}
+Oahubb<- getbb("Oahu")
+Oahubb
+```
+
+
 The `osmdata` package retrieves data from the overpass API, which is a read-only API that serves up custom selected parts of the OSM map data. To retrieve the required features of a place (defined by the bounding box), we have to then create an overpass query. This can be easily done using the `opq()` function of the osmdata package. Here we use the previously defined bounding box to create the overpass query.
 
 Run the code chunk below to update your bounding box.
 
 ```{r}
 bb %>%
+  opq()
+```
+
+```{r}
+Oahubb %>%
   opq()
 ```
 
@@ -117,9 +147,22 @@ schools <- bb %>%
   opq() %>%
   add_osm_feature(key = "amenity", value = "school") %>%
   osmdata_sf()
+```
 
+```{r}
+healthcare <- Oahubb %>%
+  opq() %>%
+  add_osm_feature(key = "amenity", value = "hospital") %>%
+  osmdata_sf()
+
+# meaning of th code 
+# healthcare <- get the bounding box for Oahu Healthcare *and then*
+# prepare an OSM query *and then*
+# specify the types of amenity to include hospital *and then*
+# convert the data to sf format
 
 ```
+
 
 ## Understanding the osmdata object
 
@@ -135,17 +178,34 @@ Run the code below to see the `osmdata` object retrieved by querying the schools
 ```{r}
 schools
 ```
+
+```{r}
+healthcare
+```
+
+
 If you want to look at any part of this object in more detail, use the `$` symbol to specify. For example, if you want to see the metadata, use the code below:
 
 ```{r}
 # metadata
 schools$meta
 ```
+
+```{r}
+healthcare$meta
+```
+
+
+
 Note how the Spatial data returned by the query are Simple Feature objects as we requested using the `osmdata_sf()` function, and how the polygons also contain more details about the hospitals such as their names, websites, wikipedia pages etc. where available.
 
 ```{r}
 # osm_polygons
 schools$osm_polygons
+```
+
+```{r}
+healthcare$osm_polygons
 ```
 
 ## Basic Mapping with OSM
@@ -168,7 +228,19 @@ ggplot() +
   geom_sf(data = schools$osm_polygons) +
   geom_sf_text(data = schools$osm_polygons, aes(label = name), size = 2, hjust = 0) +
   coord_sf(xlim = c(-156.69726, -155.97909), ylim = c(20.57443, 21.03156), expand = FALSE)
+
 ```
+
+```{r}
+ggplot() +
+  geom_sf(data = healthcare$osm_polygons) +
+  geom_sf_text(data = healthcare$osm_polygons, aes(label = name), size = 2, hjust = 0) + 
+  coord_sf(xlim = c(-158.28058, -157.64863), 
+           ylim = c(21.25482,  21.71201),
+           expand = FALSE)
+```
+
+
 The `osmdata` package can also be used to download other spatial features such as streets and coastlines, and overlay them on top of each other using `ggplot2` to create a map with more context. For this we create multiple queries for each feature like the code chunk below.
 
 After reading through the whole tutorial, come back and do:
@@ -196,6 +268,25 @@ coastline <- bb %>%
 
 ```
 
+```{r}
+# retrieving data of streets on Oahu
+Oahu_streets <- Oahubb %>%
+  opq() %>%
+  add_osm_feature("highway", c("motorway", "primary", "secondary", "tertiary")) %>%
+  osmdata_sf()
+
+# retrieving data of small streets on Oahu
+Oahu_small_streets <- Oahubb %>%
+  opq() %>%
+  add_osm_feature(key = "highway", value = c("residential", "living_street", "unclassified", "service", "footway")) %>%
+  osmdata_sf()
+
+Oahu_coastline <- Oahubb %>%
+  opq() %>%
+  add_osm_feature(key = "natural", value = "coastline") %>%
+  osmdata_sf()
+```
+
 Then we use the `ggplot2` package to visualize each of these features along with the hospitals on Maui. Note how we have used different colors, line sizes (thicknesses) and opacities (opaque is the opposite of transparent) to differentiate among the features.
 
 After reading through the whole tutorial, come back and do:
@@ -218,6 +309,35 @@ ggplot() +
     y = "Latitude"
   )
 ```
+
+```{r}
+# visualising all retrieved features over each other to form a map of Oahu
+ggplot() +
+  geom_sf(data = Oahu_streets$osm_lines, inherit.aes = FALSE, color = "#1B9E77", size = .4, alpha = .8) +
+  geom_sf(data = Oahu_small_streets$osm_lines, inherit.aes = FALSE, color = "#a6a6a6", size = .2, alpha = .8) +
+  geom_sf(data = Oahu_coastline$osm_lines, inherit.aes = FALSE, color = "black", size = .8, alpha = .5) +
+  geom_sf(data = healthcare$osm_polygons, inherit.aes = FALSE, color = "red", fill = "red", alpha = 0.9, size = 1) +
+  coord_sf(xlim = c(-158.28058,-157.64863), ylim = c(21.25482, 21.71201), expand = TRUE) +
+  geom_sf_text(data = healthcare$osm_polygons, aes(label = name), size = 1.5, hjust = 0) +
+  theme_solarized_2() +
+  labs(
+    title = "Hospitals in Oahu - Hawaii",
+    x = "Longitude",
+    y = "Latitude"
+  )
+
+
+```
+
+# Create a new plot object, starting with the street map
+rest_plot <- street_plot +
+  geom_sf(data = tucson_rest$osm_points,
+          inherit.aes = FALSE,
+          size = 1.5,
+          color = "#1B9E77") # approximately "elf green"???
+# Print the plot
+rest_plot
+
 This is more helpful. At least now we can see that most schools are either in urban areas (where roads are more dense) or along the coastline. (After you come back and complete Challenge 5, what patterns do you notice in your target area?) 
 
 However, the schools that are clustered together are hard to see and their labels are all overlapping. This is a great reason to use an interactive map that allows us to zoom in and out!
@@ -235,6 +355,14 @@ leaflet() %>%
     data = schools$osm_polygons,
     label = schools$osm_polygons$name
   ) 
+```
+
+
+```{r}
+leaflet() %>%  
+  addTiles() %>%
+  addPolygons(data = healthcare$osm_polygons,
+              label = healthcare$osm_polygons$name)
 ```
 
 # Final Challenge Preparation
