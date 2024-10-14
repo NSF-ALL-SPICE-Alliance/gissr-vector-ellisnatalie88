@@ -70,6 +70,9 @@ library(tmap)
 library(leaflet)
 library(osmdata)
 library(plotly)
+library(ggplot2)
+library(ggpubr)
+library(ggrepel)
 
 ```
 
@@ -257,10 +260,261 @@ For your challenges this week, create the necessary code chunks below. You can c
 
 **Challenge 1: Find the `place_id` that corresponds to your target area and choose a genus or species you want to map and find the `taxon_id`.**
 
+```{r}
+
+#Taxon ID = 166906 Mamaki (Native Hawaiian Medicinal Plant)
+#Place ID = 11 Hawaii, USA
+inat_obs_df <- get_inat_obs(taxon_id = 166904, #taxon id from URL
+                            place_id = 11, #place id from URL
+                            quality = "research", #specifies research grade only
+                            geo = TRUE, #Specifies that we want geocoordinates
+                            maxresults = 100) #Limits results
+
+save(inat_obs_df, file = "hawaii_mamaki_inat.Rdata")
+
+inat_obs_sf <-  inat_obs_df %>% 
+  select(longitude, latitude, datetime, common_name, scientific_name, image_url, user_login) %>% 
+  st_as_sf(coords=c("longitude", "latitude"), crs=4326)
+
+# FYI note to myself what this code means (since I kept forgetting) - crs = 4326 ; set the map projection2 to a common projection standard such as WGS84 via the argument crs = 4326
+
+dim(inat_obs_sf)
+#opened the file and it has the correct file with Mamaki on it 
+
+```
+
+```{r}
+
+#Taxon ID = 121022 NONI (Native Hawaiian Medicinal Plant)
+#Place ID = 11 Hawaii, USA
+inat_obs_df1 <- get_inat_obs(taxon_id = 121022, #taxon id from URL
+                            place_id = 11, #place id from URL
+                            quality = "research", #specifies research grade only
+                            geo = TRUE, #Specifies that we want geocoordinates
+                            maxresults = 100) #Limits results
+
+save(inat_obs_df1, file = "hawaii_noni_inat.Rdata")
+
+inat_obs_sf1 <-  inat_obs_df1 %>% 
+  select(longitude, latitude, datetime, common_name, scientific_name, image_url, user_login) %>% 
+  st_as_sf(coords=c("longitude", "latitude"), crs=4326)
+
+# FYI note to myself what this code means (since I kept forgetting) - crs = 4326 ; set the map projection2 to a common projection standard such as WGS84 via the argument crs = 4326
+
+dim(inat_obs_sf1)
+#opened the file and it has the correct file with Mamaki on it 
+
+```
+
+
+
 **Challenge 2: Create a static map using the `ggplot` function of your target area and target genus/species.**
+
+```{r}
+#For Mamaki
+Mamaki <- ggplot() +
+  geom_point(data = inat_obs_df, aes(x = longitude, y = latitude, color = common_name, text = common_name)) 
+Mamaki
+```
+
+
+```{r}
+#For Noni
+Noni <- ggplot() +
+  geom_point(data = inat_obs_df1, aes(x = longitude, y = latitude, color = common_name, text = common_name)) 
+Noni
+```
+
+```{r}
+#Combining 2 ggplot for Mamaki & Noni
+
+# Problem that I am still unable to resolve it yet - How to input the legend on the side to identify which one is Mamaki vs Noni.  Tried to input legend but it didn't work. Tried to input color=common_name but the result stated common_name was not found
+
+# Shall I give up and move on to the next challenge? ;) 
+
+Combined_Plot <- ggplot() + 
+geom_point(data=inat_obs_df, aes(x = longitude, y = latitude), color="darkgray", fill ='#8dd3c7', size=3, shape = 21) +
+geom_point(data=inat_obs_df1, aes(x = longitude, y = latitude), color= "darkgray", fill = '#bebada', size=3, shape = 21) +
+  theme_minimal() +
+    geom_text(color = "white", size = 20) +
+  labs(title = "Medicinal Plants in Hawaii", 
+       subtitle = "Mamaki (Piper Methysticum) and Noni (Morinda Citrifolia)") 
+Combined_Plot
+
+```
+
+```{r}
+#I decided to take a snack break, but I couldn't stop thinking about the issue at hand.  Eventually, I discovered a more efficient method to combine the two plots with the legend on the side. 
+
+# Lesson Learned: As a programmer, we often get fixated on the code and stuck on a problem.  Instead of forcing ourselves to resolve it immediately, it's beneficial to take a break and clear our minds. Often, the solution will present itself naturally :) 
+
+# Option 2 
+
+combined_df <- rbind(inat_obs_df,inat_obs_df1)
+
+Combined_Plot_Option2 <- ggplot() +
+  geom_point(data = combined_df, aes(x = longitude, y = latitude, color = common_name), size = 3) +
+  scale_shape_manual(values = c(21,22)) + 
+  scale_color_manual(values=c("#8dd3c7", "#bebada"))+
+  theme_linedraw() +
+  labs(title = "Medicinal Plants in Hawaii",
+       subtitle = "Mamaki (Piper Methysticum) and Noni (Morinda Citrifolia)") 
+
+
+Combined_Plot_Option2
+
+```
+
 
 **Challenge 3: Create an interactive map using the `leaflet` function of your target area and target genus/species.** 
 
+```{r}
+Oahu_bb <- getbb("Oahu")
+Oahu_bb 
+```
+
+```{r}
+# retrieving data of streets on Oahu
+Oahu_streets <- Oahu_bb %>%
+  opq() %>%
+  add_osm_feature("highway", c("motorway", "primary", "secondary", "tertiary")) %>%
+  osmdata_sf()
+
+# retrieving data of small streets on Oahu
+Oahu_small_streets <- Oahu_bb %>%
+  opq() %>%
+  add_osm_feature(key = "highway", value = c("residential", "living_street", "unclassified", "service", "footway")) %>%
+  osmdata_sf()
+
+# retrieving data of coastline on oahu
+Oahu_coast <- Oahu_bb %>%
+  opq() %>%
+  add_osm_feature(key = "natural", value = "coastline") %>%
+  osmdata_sf()
+
+
+# retrieving data of national park on Oahu
+Oahu_np <- Oahu_bb %>%
+  opq() %>%
+  add_osm_feature(key = "boundary", value = "national_park") %>%
+  osmdata_sf()
+
+# retrieving data of protected areas on Oahu
+Oahu_protected <- Oahu_bb %>%
+  opq() %>%
+  add_osm_feature(key = "boundary", value = "protected_area") %>%
+  osmdata_sf()
+```
+
+```{r}
+
+# I tried to combine all codes together BUT the result is unacceptable (to me)
+
+# UPDATE: After I completed this assignment and click "Knit", I noticed there was error on below code (too many "+" therefore Knit halted.  After I fixed the code, the result is the same between plot vs plot1  LOL)
+
+plot <- ggplot() +
+  geom_sf(data = Oahu_streets$osm_lines, inherit.aes = FALSE, color = "#1b9e77", size = .4, alpha = .8) +
+  geom_sf(data = Oahu_small_streets$osm_lines, inherit.aes = FALSE, color = "#d95f02", size = .2, alpha = .8) +
+  geom_sf(data = Oahu_coast$osm_lines, inherit.aes = FALSE, color = "#7570b3", size = .8, alpha = .5) +
+  geom_sf(data = Oahu_np$osm_polygons, inherit.aes = FALSE, color = "#e7298a", size = .2, alpha = .8) +
+  geom_sf(data = Oahu_protected$osm_polygons, inherit.aes = FALSE, color = "#66a61e", size = .2, alpha = .8) +
+  geom_point(data = combined_df, aes(x = longitude, y = latitude, color = common_name), size = 3) +
+  scale_shape_manual(values = c(21,22)) + 
+  scale_color_manual(values=c("#8dd3c7", "#bebada"))+
+  theme_linedraw() +
+  labs(title = "Medicinal Plants in Hawaii",
+       subtitle = "Mamaki (Piper Methysticum) and Noni (Morinda Citrifolia)") +
+   geom_sf_text(size = 1, data = Oahu_protected$osm_polygons, aes(label = name)) + #here we are adding some labels for our protected areas for context 
+  coord_sf(xlim = c(-158.28058, -157.64863), ylim = c(21.25482, 21.71201), expand = TRUE) + # setting the limits of our map based on the lat/long we got from our OSM bounding box
+  ggtitle("Medicinal Plants ** Mamaki (Piper Methysticum) and Noni (Morinda Citrifolia) ** in Oahu, Hawaii", subtitle = "Based on iNaturalist Data as of October 14, 2024") +
+  theme_linedraw() +
+  labs(
+    color="Common Name", #this changes the title of our legend
+    x = "Longitude",
+    y = "Latitude"
+  ) 
+
+plot
+```
+
+
+
+```{r}
+
+# Try again.... 
+# What I did differently - I started with the main code first geom_point(data = combined_df...... then print plot. Slowly add 1 layer at a time i.e.  geom sf(data = Oahu_streets, etc), print plot, then add more layer, print plot, etc. 
+
+# Result - Much better... :) 
+# Lesson Learned - "Never give up - Never surrender". 
+
+# Summary of Analysis - The majority of Mamaki and Noni medicinal plants are outside of protected areas in Oahu, Hawaii (assuming all the protected area have been added to Open Street Map)
+
+
+plot1 <- ggplot() +
+    geom_sf(data = Oahu_streets$osm_lines, inherit.aes = FALSE, color = "#1b9e77", size = .4, alpha = .8) +
+  geom_sf(data = Oahu_small_streets$osm_lines, inherit.aes = FALSE, color = "#d95f02", size = .2, alpha = .8) +
+    geom_sf(data = Oahu_coast$osm_lines, inherit.aes = FALSE, color = "#7570b3", size = .8, alpha = .5) +
+    geom_sf(data = Oahu_np$osm_polygons, inherit.aes = FALSE, color = "#e7298a", size = .2, alpha = .8) +
+    geom_sf(data = Oahu_protected$osm_polygons, inherit.aes = FALSE, color = "#66a61e", size = .2, alpha = .8) +
+  geom_sf_text(size = 1, data = Oahu_protected$osm_polygons, aes(label = name)) + #here we are adding some labels for our protected areas for context 
+  geom_point(data = combined_df, aes(x = longitude, y = latitude, color = common_name), size = 3) +
+  scale_shape_manual(values = c(21,22)) + 
+  scale_color_manual(values=c("#8dd3c7", "#bebada"))+
+  theme_grey() +
+  labs(title = "Mamaki (Piper Methysticum) and Noni (Morinda Citrifolia) *Medicinal Plants* in Oahu, Hawaii", 
+       subtitle = "Based on iNaturalist Data as of October 14, 2024") +
+  coord_sf(xlim = c(-158.28058, -157.64863), ylim = c(21.25482, 21.71201), expand = TRUE)
+
+plot1
+```
+
+```{r}
+# To add to plotly 
+ggplotly(plot1,
+         tooltip = c("text"))
+```
+
+```{r}
+
+# Objective = to examine the map of Waianae District to identify the presence of Mamaki and Noni medicinal plant.  Waianae District holds a special place in my heart due to its large houseless population and the insufficient number of medical centers and clinics available to support the community's health and wellness needs. 
+
+# Summary of Analysis - 1 Mamaki and 0 Noni plants in Waianae District.  This can be due to low number of observer personnel in Wainae District who input the data into iNaturalist website, etc.)
+
+# Circle Marker Color Legend - Purple (Mamaki) and Light Blue (Noni)
+
+# Future Work - From coding perspective, it would be nice to manually select the Circle Marker Color for Mamaki and Noni plants. However, given that I have already spent over 6+ hours on this week's assignment, it is time to finalize the current work and move on. 
+
+# Interactive Map
+
+inat_obs_popup_sf_combined <- combined_df %>% 
+  mutate(popup_html = paste0("<p><b>", common_name, "</b><br/>",
+                             "<i>", scientific_name, "</i></p>",
+                             "<p>Observed: ", datetime, "<br/>",
+                             "User: ", user_login, "</p>",
+                             "<p><img src='", image_url, "' style='width:100%;'/></p>")
+  )
+
+htmltools::p("iNaturalist Observations of Mamaki and Noni in Oahu, Hawaii",
+             htmltools::br(),
+             inat_obs_popup_sf_combined$datetime %>% 
+               as.Date() %>% 
+               range(na.rm = TRUE) %>% 
+               paste(collapse = " to "),
+             style = "font-weight:bold; font-size:110%;")
+
+pal <- colorFactor(topo.colors(length(unique(inat_obs_popup_sf_combined$common_name))), 
+                   domain = inat_obs_popup_sf_combined$common_name)
+
+leaflet(combined_df) %>% 
+  setView(lng = -158.11, lat = 21.4467, zoom = 11)%>%
+  addTiles() %>% 
+  addCircleMarkers(data = inat_obs_popup_sf_combined,
+                   popup = ~popup_html, 
+                   radius = 15,
+                    color = ~pal(common_name))
+
+
+```
 
 # Final Challenge Preparation
 
